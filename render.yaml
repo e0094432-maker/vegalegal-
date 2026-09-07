@@ -1,0 +1,22 @@
+services:
+  - type: worker
+    name: bitrix-tg-bot
+    env: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python bot.py"
+    disk:
+      name: bot-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: BITRIX_WEBHOOK_URL
+        sync: false
+      - key: DEAL_STAGE_ID
+        value: PREPARATION
+      - key: DEAL_CATEGORY_ID
+        value: ""
+      - key: DB_PATH
+        value: /var/data/notes.db
