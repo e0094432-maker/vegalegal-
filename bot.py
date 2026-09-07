@@ -10,6 +10,8 @@ Telegram-бот: показывает клиентов (сделки Bitrix24) �
 
 import os
 import logging
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -176,10 +178,32 @@ async def receive_note_text(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     )
 
 
+def _start_health_server() -> None:
+    """Render (Web Service) требует открытый HTTP-порт, иначе деплой падает
+    по таймауту. Бот при этом всё равно работает через long polling —
+    этот сервер нужен только для проверки, что процесс жив."""
+    port = int(os.getenv("PORT", "10000"))
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"OK")
+
+        def log_message(self, format, *args):
+            pass
+
+    threading.Thread(
+        target=lambda: HTTPServer(("0.0.0.0", port), Handler).serve_forever(),
+        daemon=True,
+    ).start()
+
+
 def main() -> None:
     if not TELEGRAM_BOT_TOKEN:
         raise SystemExit("TELEGRAM_BOT_TOKEN не задан в .env")
 
+    _start_health_server()
     storage.init_db()
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
