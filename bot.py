@@ -11,7 +11,7 @@ Telegram-бот: показывает клиентов (сделки Bitrix24) �
 import os
 import logging
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from dotenv import load_dotenv
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -186,15 +186,24 @@ def _start_health_server() -> None:
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
+            body = b"OK"
             self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(b"OK")
+            self.wfile.write(body)
+
+        def do_HEAD(self):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", "2")
+            self.end_headers()
 
         def log_message(self, format, *args):
             pass
 
     threading.Thread(
-        target=lambda: HTTPServer(("0.0.0.0", port), Handler).serve_forever(),
+        target=lambda: ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever(),
         daemon=True,
     ).start()
 
